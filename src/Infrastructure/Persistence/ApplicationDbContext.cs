@@ -1,7 +1,6 @@
 ﻿using System.Reflection;
 using CleanBooks.Application.Common.Interfaces;
 using CleanBooks.Domain.Common;
-using CleanBooks.Domain.Entities;
 using CleanBooks.Infrastructure.Identity;
 using Duende.IdentityServer.EntityFramework.Options;
 using Microsoft.AspNetCore.ApiAuthorization.IdentityServer;
@@ -27,10 +26,6 @@ public class ApplicationDbContext : ApiAuthorizationDbContext<ApplicationUser>, 
         _domainEventService = domainEventService;
         _dateTime = dateTime;
     }
-
-    public DbSet<TodoList> TodoLists => Set<TodoList>();
-
-    public DbSet<TodoItem> TodoItems => Set<TodoItem>();
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = new CancellationToken())
     {

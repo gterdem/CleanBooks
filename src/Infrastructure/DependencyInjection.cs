@@ -1,5 +1,4 @@
 ﻿using CleanBooks.Application.Common.Interfaces;
-using CleanBooks.Infrastructure.Files;
 using CleanBooks.Infrastructure.Identity;
 using CleanBooks.Infrastructure.Persistence;
 using CleanBooks.Infrastructure.Services;
@@ -42,7 +41,6 @@ public static class DependencyInjection
 
         services.AddTransient<IDateTime, DateTimeService>();
         services.AddTransient<IIdentityService, IdentityService>();
-        services.AddTransient<ICsvFileBuilder, CsvFileBuilder>();
 
         services.AddAuthentication()
             .AddIdentityServerJwt();
