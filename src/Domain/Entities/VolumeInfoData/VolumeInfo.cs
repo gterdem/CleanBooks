@@ -25,12 +25,14 @@ public class VolumeInfo
     public PrintType PrintType { get; init; }
     public ImageLinks ImageLinks { get; init; }
     public ReadingModes ReadingModes { get; init; }
-    public PanelizationSummary PanelizationSummary { get; init; } // nullable
+    public PanelizationSummary PanelizationSummary { get; init; }
     public Dimentions Dimentions { get; init; }
     public IList<string> Authors { get; init; } = new List<string>();
     public IList<string> Categories { get; init; } = new List<string>();
     public List<IndustryIdentifier> IndustryIdentifiers { get; init; } = new List<IndustryIdentifier>(); //searchable
-    
+
+    protected VolumeInfo() { }
+
     public VolumeInfo(Guid id,
         string title,
         string? subtitle,
@@ -48,9 +50,9 @@ public class VolumeInfo
         string description,
         double? averageRating,
         int? ratingsCount,
-        bool? comicsContent, 
-        string mainCategory, 
-        int? samplePageCount, 
+        bool? comicsContent,
+        string mainCategory,
+        int? samplePageCount,
         int? printedPageCount,
         List<string> authors,
         List<string> categories,
