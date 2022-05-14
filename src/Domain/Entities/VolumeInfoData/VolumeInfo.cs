@@ -3,6 +3,7 @@
 public class VolumeInfo
 {
     public Guid Id { get; init; }
+    public Guid BookId { get; init; }
     public string Title { get; init; } //searchable
     public string Publisher { get; init; } //searchable
     public string Subtitle { get; init; }

@@ -2,7 +2,7 @@
 
 namespace CleanBooks.Domain.Entities;
 
-public class Volume
+public class Book
 {
     public Guid Id { get; init; }
     public string ETag { get; init; }
@@ -12,9 +12,9 @@ public class Volume
 
     public VolumeInfo VolumeInfo { get; private set; }
 
-    protected Volume() { }
+    protected Book() { }
 
-    public Volume(Guid id, string eTag, string gApiVolumeId, string kind, string selfLink, VolumeInfo volumeInfo)
+    public Book(Guid id, string eTag, string gApiVolumeId, string kind, string selfLink, VolumeInfo volumeInfo)
     {
         Id = id;
         ETag = eTag;

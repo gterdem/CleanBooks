@@ -6,7 +6,7 @@ namespace CleanBooks.Application.Common.Interfaces;
 
 public interface IApplicationDbContext
 {
-    DbSet<Volume> Volumes { get; }
+    DbSet<Book> Books { get; }
     DbSet<VolumeInfo> VolumeInfo { get; }
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

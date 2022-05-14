@@ -29,7 +29,7 @@ public class ApplicationDbContext : ApiAuthorizationDbContext<ApplicationUser>, 
         _dateTime = dateTime;
     }
     
-    public DbSet<Volume> Volumes => Set<Volume>();
+    public DbSet<Book> Books => Set<Book>();
     public DbSet<VolumeInfo> VolumeInfo => Set<VolumeInfo>();
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = new CancellationToken())
