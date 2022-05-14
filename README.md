@@ -1,7 +1,7 @@
 # CleanBooks
 Google Books Api using clean architecture 
 
-##Database Migrations
+## Database Migrations
 To use dotnet-ef for your migrations please add the following flags to your command (values assume you are executing from repository root)
 
 --project src/Infrastructure (optional if in this folder)
