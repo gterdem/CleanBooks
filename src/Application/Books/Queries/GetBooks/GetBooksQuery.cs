@@ -26,13 +26,18 @@ public class GetBooksQuery : IRequest<VolumesDto>
     public int? StartIndex { get; set; } = 0;
     [Range(0, 40)] public int? MaxResults { get; set; } = 10;
 
-    protected SearchQuery Query
+    public SearchQuery GetQueryTerms()
     {
-        get
-        {
-            return new SearchQuery(Q);
-        }
+        return new SearchQuery(Q);
     }
+
+    // protected SearchQuery Query
+    // {
+    //     get
+    //     {
+    //         return new SearchQuery(Q);
+    //     }
+    // }
 
     public class SearchQuery
     {
@@ -134,13 +139,14 @@ public class GetBooksQuery : IRequest<VolumesDto>
     public override string ToString()
     {
         var builder = new StringBuilder();
-        builder.Append(Query.GetSearchQuery());
+        builder.Append(GetQueryTerms().GetSearchQuery());
 
         if (VolumeId != null)
         {
             builder.Append($"&volumeId={VolumeId}");
         }
 
+        //TODO: Filter, LangRestrict
         return builder.ToString();
     }
 }
@@ -160,12 +166,10 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
 
     public async Task<VolumesDto> Handle(GetBooksQuery request, CancellationToken cancellationToken = default)
     {
-        //TODO: Check db based on query request
-        var query = request.ToString();
-
+        //TODO: Add caching
         VolumesDto volumes = await GetBooksFromDatabaseAsync(request, cancellationToken);
 
-        if (volumes == null)
+        if (!volumes.Books.Any())
         {
             volumes = await GetBooksFromGoogleServiceAsync(request, cancellationToken);
             _logger.LogInformation("Request completed from Google BookService with query:{0} ...", request.ToString());
@@ -175,7 +179,7 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
                 Books = _mapper.Map<IList<BookDto>>(newlyAddedBooks),
                 Kind = volumes.Kind,
                 ETag = volumes.ETag,
-                TotalItems = volumes.TotalItems //TODO: db query result
+                TotalItems = (await _dbContext.Books.CountAsync(cancellationToken))
             };
             _logger.LogInformation("Returning Book Dto list...");
             return dto;
@@ -188,11 +192,22 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
     {
         var result = await _dbContext.Books
             .AsNoTracking()
+            .WithSpecification(new SearchTermSpecification(queryTerm: request.GetQueryTerms().QValue,
+                inTitle: request.GetQueryTerms().InTitle,
+                inAuthor: request.GetQueryTerms().InAuthor,
+                inPublisher: request.GetQueryTerms().InPublisher,
+                subject: request.GetQueryTerms().Subject)
+            )
             .WithSpecification(new OrderBySpecification(request.OrderBy))
             .WithSpecification(new BooksByPaginatedSpec(request.StartIndex.Value, request.MaxResults.Value))
             .ProjectToListAsync<BookDto>(_mapper.ConfigurationProvider);
 
-        return new VolumesDto() {Books = result, TotalItems = (await _dbContext.Books.CountAsync(cancellationToken)), Kind = "books#volume"};
+        return new VolumesDto()
+        {
+            Books = result,
+            TotalItems = (await _dbContext.Books.CountAsync(cancellationToken)),
+            Kind = "books#volume"
+        };
     }
 
     private async Task<List<Book>> InsertToLocalDataStoreAsync(VolumesDto volumes, CancellationToken cancellationToken)
@@ -231,7 +246,7 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
         bool allowAnonLogging = vinfo.AllowAnonLogging ?? false;
         Enum.TryParse(vinfo.PrintType, out printType);
 
-        return new VolumeInfo(id: Guid.NewGuid(),
+        var newVolume = new VolumeInfo(id: Guid.NewGuid(),
             title: vinfo.Title, subtitle: vinfo.Subtitle, publisher: vinfo.Publisher,
             publishedDate: vinfo.PublishedDate,
             pageCount: pageCount, printType: printType, maturityRating: vinfo.MaturityRating,
@@ -247,6 +262,11 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
             readingModes: vinfo.ReadingModes, panelizationSummary: vinfo.PanelizationSummary,
             imageLinks: vinfo.ImageLinks, dimentions: vinfo.Dimentions
         );
+        foreach (var ii in vinfo.IndustryIdentifiers)
+        {
+            newVolume.AddIndustryIdentifier(ii.Type,ii.Identifier);
+        }
+        return newVolume;
     }
 
     private async Task<VolumesDto> GetBooksFromGoogleServiceAsync(GetBooksQuery request,

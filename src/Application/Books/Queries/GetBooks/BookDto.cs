@@ -12,4 +12,5 @@ public class BookDto : IMapFrom<Book>
     public string SelfLink { get; init; }
 
     public VolumeInfoDto VolumeInfo { get; set; }
+    //TODO: Others
 }
