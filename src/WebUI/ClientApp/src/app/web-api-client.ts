@@ -13,3 +13,666 @@ import { Injectable, Inject, Optional, InjectionToken } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpResponse, HttpResponseBase } from '@angular/common/http';
 
 export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL');
+
+export interface IBooksClient {
+    get(q: string | undefined, volumeId: string | null | undefined, langRestrict: string | null | undefined, filter: string | null | undefined, startIndex: number | null | undefined, maxResults: number | null | undefined): Observable<VolumesDto>;
+}
+
+@Injectable({
+    providedIn: 'root'
+})
+export class BooksClient implements IBooksClient {
+    private http: HttpClient;
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(@Inject(HttpClient) http: HttpClient, @Optional() @Inject(API_BASE_URL) baseUrl?: string) {
+        this.http = http;
+        this.baseUrl = baseUrl !== undefined && baseUrl !== null ? baseUrl : "";
+    }
+
+    get(q: string | undefined, volumeId: string | null | undefined, langRestrict: string | null | undefined, filter: string | null | undefined, startIndex: number | null | undefined, maxResults: number | null | undefined): Observable<VolumesDto> {
+        let url_ = this.baseUrl + "/api/Books?";
+        if (q === null)
+            throw new Error("The parameter 'q' cannot be null.");
+        else if (q !== undefined)
+            url_ += "Q=" + encodeURIComponent("" + q) + "&";
+        if (volumeId !== undefined && volumeId !== null)
+            url_ += "VolumeId=" + encodeURIComponent("" + volumeId) + "&";
+        if (langRestrict !== undefined && langRestrict !== null)
+            url_ += "LangRestrict=" + encodeURIComponent("" + langRestrict) + "&";
+        if (filter !== undefined && filter !== null)
+            url_ += "Filter=" + encodeURIComponent("" + filter) + "&";
+        if (startIndex !== undefined && startIndex !== null)
+            url_ += "StartIndex=" + encodeURIComponent("" + startIndex) + "&";
+        if (maxResults !== undefined && maxResults !== null)
+            url_ += "MaxResults=" + encodeURIComponent("" + maxResults) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_ : any = {
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processGet(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processGet(<any>response_);
+                } catch (e) {
+                    return <Observable<VolumesDto>><any>_observableThrow(e);
+                }
+            } else
+                return <Observable<VolumesDto>><any>_observableThrow(response_);
+        }));
+    }
+
+    protected processGet(response: HttpResponseBase): Observable<VolumesDto> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (<any>response).error instanceof Blob ? (<any>response).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = VolumesDto.fromJS(resultData200);
+            return _observableOf(result200);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf<VolumesDto>(<any>null);
+    }
+}
+
+export class VolumesDto implements IVolumesDto {
+    kind?: string;
+    totalItems?: number | undefined;
+    eTag?: string;
+    books?: BookDto[];
+
+    constructor(data?: IVolumesDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.kind = _data["kind"];
+            this.totalItems = _data["totalItems"];
+            this.eTag = _data["eTag"];
+            if (Array.isArray(_data["books"])) {
+                this.books = [] as any;
+                for (let item of _data["books"])
+                    this.books!.push(BookDto.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): VolumesDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new VolumesDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["kind"] = this.kind;
+        data["totalItems"] = this.totalItems;
+        data["eTag"] = this.eTag;
+        if (Array.isArray(this.books)) {
+            data["books"] = [];
+            for (let item of this.books)
+                data["books"].push(item.toJSON());
+        }
+        return data; 
+    }
+}
+
+export interface IVolumesDto {
+    kind?: string;
+    totalItems?: number | undefined;
+    eTag?: string;
+    books?: BookDto[];
+}
+
+export class BookDto implements IBookDto {
+    id?: string;
+    eTag?: string;
+    gApiVolumeId?: string;
+    kind?: string;
+    selfLink?: string;
+    volumeInfo?: VolumeInfoDto;
+
+    constructor(data?: IBookDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.eTag = _data["eTag"];
+            this.gApiVolumeId = _data["gApiVolumeId"];
+            this.kind = _data["kind"];
+            this.selfLink = _data["selfLink"];
+            this.volumeInfo = _data["volumeInfo"] ? VolumeInfoDto.fromJS(_data["volumeInfo"]) : <any>undefined;
+        }
+    }
+
+    static fromJS(data: any): BookDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new BookDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["eTag"] = this.eTag;
+        data["gApiVolumeId"] = this.gApiVolumeId;
+        data["kind"] = this.kind;
+        data["selfLink"] = this.selfLink;
+        data["volumeInfo"] = this.volumeInfo ? this.volumeInfo.toJSON() : <any>undefined;
+        return data; 
+    }
+}
+
+export interface IBookDto {
+    id?: string;
+    eTag?: string;
+    gApiVolumeId?: string;
+    kind?: string;
+    selfLink?: string;
+    volumeInfo?: VolumeInfoDto;
+}
+
+export class VolumeInfoDto implements IVolumeInfoDto {
+    id?: string;
+    bookId?: string;
+    title?: string;
+    publisher?: string;
+    subtitle?: string;
+    publishedDate?: string;
+    pageCount?: number | undefined;
+    maturityRating?: string;
+    allowAnonLogging?: boolean | undefined;
+    contentVersion?: string;
+    language?: string;
+    previewLink?: string;
+    infoLink?: string;
+    canonicalVolumeLink?: string;
+    description?: string;
+    averageRating?: number | undefined;
+    comicsContent?: boolean | undefined;
+    mainCategory?: string;
+    samplePageCount?: number | undefined;
+    printedPageCount?: number | undefined;
+    ratingsCount?: number | undefined;
+    printType?: string;
+    imageLinks?: ImageLinks;
+    readingModes?: ReadingModes;
+    panelizationSummary?: PanelizationSummary;
+    dimentions?: Dimentions;
+    authors?: string[];
+    categories?: string[];
+    industryIdentifiers?: IndustryIdentifierDto[];
+
+    constructor(data?: IVolumeInfoDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.bookId = _data["bookId"];
+            this.title = _data["title"];
+            this.publisher = _data["publisher"];
+            this.subtitle = _data["subtitle"];
+            this.publishedDate = _data["publishedDate"];
+            this.pageCount = _data["pageCount"];
+            this.maturityRating = _data["maturityRating"];
+            this.allowAnonLogging = _data["allowAnonLogging"];
+            this.contentVersion = _data["contentVersion"];
+            this.language = _data["language"];
+            this.previewLink = _data["previewLink"];
+            this.infoLink = _data["infoLink"];
+            this.canonicalVolumeLink = _data["canonicalVolumeLink"];
+            this.description = _data["description"];
+            this.averageRating = _data["averageRating"];
+            this.comicsContent = _data["comicsContent"];
+            this.mainCategory = _data["mainCategory"];
+            this.samplePageCount = _data["samplePageCount"];
+            this.printedPageCount = _data["printedPageCount"];
+            this.ratingsCount = _data["ratingsCount"];
+            this.printType = _data["printType"];
+            this.imageLinks = _data["imageLinks"] ? ImageLinks.fromJS(_data["imageLinks"]) : <any>undefined;
+            this.readingModes = _data["readingModes"] ? ReadingModes.fromJS(_data["readingModes"]) : <any>undefined;
+            this.panelizationSummary = _data["panelizationSummary"] ? PanelizationSummary.fromJS(_data["panelizationSummary"]) : <any>undefined;
+            this.dimentions = _data["dimentions"] ? Dimentions.fromJS(_data["dimentions"]) : <any>undefined;
+            if (Array.isArray(_data["authors"])) {
+                this.authors = [] as any;
+                for (let item of _data["authors"])
+                    this.authors!.push(item);
+            }
+            if (Array.isArray(_data["categories"])) {
+                this.categories = [] as any;
+                for (let item of _data["categories"])
+                    this.categories!.push(item);
+            }
+            if (Array.isArray(_data["industryIdentifiers"])) {
+                this.industryIdentifiers = [] as any;
+                for (let item of _data["industryIdentifiers"])
+                    this.industryIdentifiers!.push(IndustryIdentifierDto.fromJS(item));
+            }
+        }
+    }
+
+    static fromJS(data: any): VolumeInfoDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new VolumeInfoDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["bookId"] = this.bookId;
+        data["title"] = this.title;
+        data["publisher"] = this.publisher;
+        data["subtitle"] = this.subtitle;
+        data["publishedDate"] = this.publishedDate;
+        data["pageCount"] = this.pageCount;
+        data["maturityRating"] = this.maturityRating;
+        data["allowAnonLogging"] = this.allowAnonLogging;
+        data["contentVersion"] = this.contentVersion;
+        data["language"] = this.language;
+        data["previewLink"] = this.previewLink;
+        data["infoLink"] = this.infoLink;
+        data["canonicalVolumeLink"] = this.canonicalVolumeLink;
+        data["description"] = this.description;
+        data["averageRating"] = this.averageRating;
+        data["comicsContent"] = this.comicsContent;
+        data["mainCategory"] = this.mainCategory;
+        data["samplePageCount"] = this.samplePageCount;
+        data["printedPageCount"] = this.printedPageCount;
+        data["ratingsCount"] = this.ratingsCount;
+        data["printType"] = this.printType;
+        data["imageLinks"] = this.imageLinks ? this.imageLinks.toJSON() : <any>undefined;
+        data["readingModes"] = this.readingModes ? this.readingModes.toJSON() : <any>undefined;
+        data["panelizationSummary"] = this.panelizationSummary ? this.panelizationSummary.toJSON() : <any>undefined;
+        data["dimentions"] = this.dimentions ? this.dimentions.toJSON() : <any>undefined;
+        if (Array.isArray(this.authors)) {
+            data["authors"] = [];
+            for (let item of this.authors)
+                data["authors"].push(item);
+        }
+        if (Array.isArray(this.categories)) {
+            data["categories"] = [];
+            for (let item of this.categories)
+                data["categories"].push(item);
+        }
+        if (Array.isArray(this.industryIdentifiers)) {
+            data["industryIdentifiers"] = [];
+            for (let item of this.industryIdentifiers)
+                data["industryIdentifiers"].push(item.toJSON());
+        }
+        return data; 
+    }
+}
+
+export interface IVolumeInfoDto {
+    id?: string;
+    bookId?: string;
+    title?: string;
+    publisher?: string;
+    subtitle?: string;
+    publishedDate?: string;
+    pageCount?: number | undefined;
+    maturityRating?: string;
+    allowAnonLogging?: boolean | undefined;
+    contentVersion?: string;
+    language?: string;
+    previewLink?: string;
+    infoLink?: string;
+    canonicalVolumeLink?: string;
+    description?: string;
+    averageRating?: number | undefined;
+    comicsContent?: boolean | undefined;
+    mainCategory?: string;
+    samplePageCount?: number | undefined;
+    printedPageCount?: number | undefined;
+    ratingsCount?: number | undefined;
+    printType?: string;
+    imageLinks?: ImageLinks;
+    readingModes?: ReadingModes;
+    panelizationSummary?: PanelizationSummary;
+    dimentions?: Dimentions;
+    authors?: string[];
+    categories?: string[];
+    industryIdentifiers?: IndustryIdentifierDto[];
+}
+
+export abstract class ValueObject implements IValueObject {
+
+    constructor(data?: IValueObject) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+    }
+
+    static fromJS(data: any): ValueObject {
+        data = typeof data === 'object' ? data : {};
+        throw new Error("The abstract class 'ValueObject' cannot be instantiated.");
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        return data; 
+    }
+}
+
+export interface IValueObject {
+}
+
+export class ImageLinks extends ValueObject implements IImageLinks {
+    extraLarge?: string;
+    large?: string;
+    medium?: string;
+    small?: string;
+    smallThumbnail?: string;
+    thumbnail?: string;
+
+    constructor(data?: IImageLinks) {
+        super(data);
+    }
+
+    init(_data?: any) {
+        super.init(_data);
+        if (_data) {
+            this.extraLarge = _data["extraLarge"];
+            this.large = _data["large"];
+            this.medium = _data["medium"];
+            this.small = _data["small"];
+            this.smallThumbnail = _data["smallThumbnail"];
+            this.thumbnail = _data["thumbnail"];
+        }
+    }
+
+    static fromJS(data: any): ImageLinks {
+        data = typeof data === 'object' ? data : {};
+        let result = new ImageLinks();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["extraLarge"] = this.extraLarge;
+        data["large"] = this.large;
+        data["medium"] = this.medium;
+        data["small"] = this.small;
+        data["smallThumbnail"] = this.smallThumbnail;
+        data["thumbnail"] = this.thumbnail;
+        super.toJSON(data);
+        return data; 
+    }
+}
+
+export interface IImageLinks extends IValueObject {
+    extraLarge?: string;
+    large?: string;
+    medium?: string;
+    small?: string;
+    smallThumbnail?: string;
+    thumbnail?: string;
+}
+
+export class ReadingModes extends ValueObject implements IReadingModes {
+    text?: boolean | undefined;
+    image?: boolean | undefined;
+
+    constructor(data?: IReadingModes) {
+        super(data);
+    }
+
+    init(_data?: any) {
+        super.init(_data);
+        if (_data) {
+            this.text = _data["text"];
+            this.image = _data["image"];
+        }
+    }
+
+    static fromJS(data: any): ReadingModes {
+        data = typeof data === 'object' ? data : {};
+        let result = new ReadingModes();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["text"] = this.text;
+        data["image"] = this.image;
+        super.toJSON(data);
+        return data; 
+    }
+}
+
+export interface IReadingModes extends IValueObject {
+    text?: boolean | undefined;
+    image?: boolean | undefined;
+}
+
+export class PanelizationSummary extends ValueObject implements IPanelizationSummary {
+    containsEpubBubbles?: boolean | undefined;
+    containsImageBubbles?: boolean | undefined;
+    epubBubbleVersion?: string;
+    imageBubbleVersion?: string;
+
+    constructor(data?: IPanelizationSummary) {
+        super(data);
+    }
+
+    init(_data?: any) {
+        super.init(_data);
+        if (_data) {
+            this.containsEpubBubbles = _data["containsEpubBubbles"];
+            this.containsImageBubbles = _data["containsImageBubbles"];
+            this.epubBubbleVersion = _data["epubBubbleVersion"];
+            this.imageBubbleVersion = _data["imageBubbleVersion"];
+        }
+    }
+
+    static fromJS(data: any): PanelizationSummary {
+        data = typeof data === 'object' ? data : {};
+        let result = new PanelizationSummary();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["containsEpubBubbles"] = this.containsEpubBubbles;
+        data["containsImageBubbles"] = this.containsImageBubbles;
+        data["epubBubbleVersion"] = this.epubBubbleVersion;
+        data["imageBubbleVersion"] = this.imageBubbleVersion;
+        super.toJSON(data);
+        return data; 
+    }
+}
+
+export interface IPanelizationSummary extends IValueObject {
+    containsEpubBubbles?: boolean | undefined;
+    containsImageBubbles?: boolean | undefined;
+    epubBubbleVersion?: string;
+    imageBubbleVersion?: string;
+}
+
+export class Dimentions extends ValueObject implements IDimentions {
+    height?: string;
+    thickness?: string;
+    width?: string;
+
+    constructor(data?: IDimentions) {
+        super(data);
+    }
+
+    init(_data?: any) {
+        super.init(_data);
+        if (_data) {
+            this.height = _data["height"];
+            this.thickness = _data["thickness"];
+            this.width = _data["width"];
+        }
+    }
+
+    static fromJS(data: any): Dimentions {
+        data = typeof data === 'object' ? data : {};
+        let result = new Dimentions();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["height"] = this.height;
+        data["thickness"] = this.thickness;
+        data["width"] = this.width;
+        super.toJSON(data);
+        return data; 
+    }
+}
+
+export interface IDimentions extends IValueObject {
+    height?: string;
+    thickness?: string;
+    width?: string;
+}
+
+export class IndustryIdentifierDto implements IIndustryIdentifierDto {
+    id?: string;
+    volumeInfoId?: string;
+    type?: string;
+    identifier?: string;
+
+    constructor(data?: IIndustryIdentifierDto) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.volumeInfoId = _data["volumeInfoId"];
+            this.type = _data["type"];
+            this.identifier = _data["identifier"];
+        }
+    }
+
+    static fromJS(data: any): IndustryIdentifierDto {
+        data = typeof data === 'object' ? data : {};
+        let result = new IndustryIdentifierDto();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["volumeInfoId"] = this.volumeInfoId;
+        data["type"] = this.type;
+        data["identifier"] = this.identifier;
+        return data; 
+    }
+}
+
+export interface IIndustryIdentifierDto {
+    id?: string;
+    volumeInfoId?: string;
+    type?: string;
+    identifier?: string;
+}
+
+export class SwaggerException extends Error {
+    message: string;
+    status: number;
+    response: string;
+    headers: { [key: string]: any; };
+    result: any;
+
+    constructor(message: string, status: number, response: string, headers: { [key: string]: any; }, result: any) {
+        super();
+
+        this.message = message;
+        this.status = status;
+        this.response = response;
+        this.headers = headers;
+        this.result = result;
+    }
+
+    protected isSwaggerException = true;
+
+    static isSwaggerException(obj: any): obj is SwaggerException {
+        return obj.isSwaggerException === true;
+    }
+}
+
+function throwException(message: string, status: number, response: string, headers: { [key: string]: any; }, result?: any): Observable<any> {
+    if (result !== null && result !== undefined)
+        return _observableThrow(result);
+    else
+        return _observableThrow(new SwaggerException(message, status, response, headers, null));
+}
+
+function blobToText(blob: any): Observable<string> {
+    return new Observable<string>((observer: any) => {
+        if (!blob) {
+            observer.next("");
+            observer.complete();
+        } else {
+            let reader = new FileReader();
+            reader.onload = event => {
+                observer.next((<any>event.target).result);
+                observer.complete();
+            };
+            reader.readAsText(blob);
+        }
+    });
+}

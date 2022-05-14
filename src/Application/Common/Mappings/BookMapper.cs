@@ -8,6 +8,11 @@ public static class BookMapper
 {
     public static VolumesDto MapGoogleVolumesDataToVolumeDto(Volumes volumes)
     {
+        // Something wrong with query
+        if (volumes.TotalItems == 0)
+        {
+            return null;
+        }
         return new VolumesDto()
         {
             Kind = volumes.Kind,
@@ -71,7 +76,7 @@ public static class BookMapper
             PanelizationSummary = MapPanelizationSummaryData(volumeInfoData.PanelizationSummary),
             ReadingModes = MapReadingModesData(volumeInfoData.ReadingModes)
         };
-
+        if (volumeInfoData.IndustryIdentifiers == null) return dto;
         foreach (var ii in volumeInfoData.IndustryIdentifiers)
         {
             dto.IndustryIdentifiers.Add(MaIndustryIdentifier(ii));

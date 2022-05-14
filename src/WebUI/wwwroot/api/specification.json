@@ -5,7 +5,380 @@
     "title": "CleanBooks API",
     "version": "1.0.0"
   },
+  "paths": {
+    "/api/Books": {
+      "get": {
+        "tags": [
+          "Books"
+        ],
+        "operationId": "Books_Get",
+        "parameters": [
+          {
+            "name": "Q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "VolumeId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
+          },
+          {
+            "name": "LangRestrict",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 3
+          },
+          {
+            "name": "Filter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 4
+          },
+          {
+            "name": "StartIndex",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 5
+          },
+          {
+            "name": "MaxResults",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "maximum": 40.0,
+              "minimum": 0.0,
+              "nullable": true
+            },
+            "x-position": 6
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VolumesDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "components": {
+    "schemas": {
+      "VolumesDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "totalItems": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "eTag": {
+            "type": "string"
+          },
+          "books": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookDto"
+            }
+          }
+        }
+      },
+      "BookDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "eTag": {
+            "type": "string"
+          },
+          "gApiVolumeId": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "selfLink": {
+            "type": "string"
+          },
+          "volumeInfo": {
+            "$ref": "#/components/schemas/VolumeInfoDto"
+          }
+        }
+      },
+      "VolumeInfoDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "bookId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "publisher": {
+            "type": "string"
+          },
+          "subtitle": {
+            "type": "string"
+          },
+          "publishedDate": {
+            "type": "string"
+          },
+          "pageCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "maturityRating": {
+            "type": "string"
+          },
+          "allowAnonLogging": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "contentVersion": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "previewLink": {
+            "type": "string"
+          },
+          "infoLink": {
+            "type": "string"
+          },
+          "canonicalVolumeLink": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "averageRating": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "comicsContent": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "mainCategory": {
+            "type": "string"
+          },
+          "samplePageCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "printedPageCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "ratingsCount": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "printType": {
+            "type": "string"
+          },
+          "imageLinks": {
+            "$ref": "#/components/schemas/ImageLinks"
+          },
+          "readingModes": {
+            "$ref": "#/components/schemas/ReadingModes"
+          },
+          "panelizationSummary": {
+            "$ref": "#/components/schemas/PanelizationSummary"
+          },
+          "dimentions": {
+            "$ref": "#/components/schemas/Dimentions"
+          },
+          "authors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "industryIdentifiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IndustryIdentifierDto"
+            }
+          }
+        }
+      },
+      "ImageLinks": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ValueObject"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "extraLarge": {
+                "type": "string"
+              },
+              "large": {
+                "type": "string"
+              },
+              "medium": {
+                "type": "string"
+              },
+              "small": {
+                "type": "string"
+              },
+              "smallThumbnail": {
+                "type": "string"
+              },
+              "thumbnail": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "ValueObject": {
+        "type": "object",
+        "x-abstract": true,
+        "additionalProperties": false
+      },
+      "ReadingModes": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ValueObject"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "text": {
+                "type": "boolean",
+                "nullable": true
+              },
+              "image": {
+                "type": "boolean",
+                "nullable": true
+              }
+            }
+          }
+        ]
+      },
+      "PanelizationSummary": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ValueObject"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "containsEpubBubbles": {
+                "type": "boolean",
+                "nullable": true
+              },
+              "containsImageBubbles": {
+                "type": "boolean",
+                "nullable": true
+              },
+              "epubBubbleVersion": {
+                "type": "string"
+              },
+              "imageBubbleVersion": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "Dimentions": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ValueObject"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "height": {
+                "type": "string"
+              },
+              "thickness": {
+                "type": "string"
+              },
+              "width": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "IndustryIdentifierDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "guid"
+          },
+          "volumeInfoId": {
+            "type": "string",
+            "format": "guid"
+          },
+          "type": {
+            "type": "string"
+          },
+          "identifier": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "securitySchemes": {
       "JWT": {
         "type": "apiKey",
