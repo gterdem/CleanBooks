@@ -79,7 +79,7 @@ public static class BookMapper
         if (volumeInfoData.IndustryIdentifiers == null) return dto;
         foreach (var ii in volumeInfoData.IndustryIdentifiers)
         {
-            dto.IndustryIdentifiers.Add(MaIndustryIdentifier(ii));
+            dto.IndustryIdentifiers.Add(MapIndustryIdentifier(ii));
         }
 
         return dto;
@@ -109,7 +109,7 @@ public static class BookMapper
             imageLinks.SmallThumbnail, imageLinks.Thumbnail);
     }
 
-    private static IndustryIdentifierDto MaIndustryIdentifier(Volume.VolumeInfoData.IndustryIdentifiersData ii)
+    private static IndustryIdentifierDto MapIndustryIdentifier(Volume.VolumeInfoData.IndustryIdentifiersData ii)
     {
         return new IndustryIdentifierDto() {Identifier = ii.Identifier, Type = ii.Type};
     }

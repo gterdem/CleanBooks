@@ -11,7 +11,7 @@ public class IndustryIdentifier
     {
     }
 
-    public IndustryIdentifier(Guid id, string type, string identifier)
+    public IndustryIdentifier(Guid id, string type="", string identifier="")
     {
         Id = id;
         Type = type;

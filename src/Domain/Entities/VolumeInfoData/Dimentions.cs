@@ -2,9 +2,9 @@
 
 public class Dimentions : ValueObject
 {
-    public string Height { get; init; }
-    public string Thickness { get; init; }
-    public string Width { get; init; }
+    public string? Height { get; init; }
+    public string? Thickness { get; init; }
+    public string? Width { get; init; }
 
     protected Dimentions()
     {

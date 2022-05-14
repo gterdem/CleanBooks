@@ -1,4 +1,6 @@
-﻿namespace CleanBooks.Domain.Entities.VolumeInfoData;
+﻿using System.Globalization;
+
+namespace CleanBooks.Domain.Entities.VolumeInfoData;
 
 public class VolumeInfo
 {
@@ -6,20 +8,20 @@ public class VolumeInfo
     public Guid BookId { get; init; }
     public string Title { get; init; } //searchable
     public string Publisher { get; init; } //searchable
-    public string Subtitle { get; init; }
+    public string? Subtitle { get; init; }
     public DateTime PublishedDate { get; init; }
     public int? PageCount { get; init; }
-    public string MaturityRating { get; init; }
+    public string? MaturityRating { get; init; }
     public bool? AllowAnonLogging { get; init; }
-    public string ContentVersion { get; init; }
-    public string Language { get; init; }
-    public string PreviewLink { get; init; }
-    public string InfoLink { get; init; }
-    public string CanonicalVolumeLink { get; init; }
-    public string Description { get; init; }
+    public string? ContentVersion { get; init; }
+    public string? Language { get; init; }
+    public string? PreviewLink { get; init; }
+    public string? InfoLink { get; init; }
+    public string? CanonicalVolumeLink { get; init; }
+    public string? Description { get; init; }
     public double? AverageRating { get; init; }
     public bool? ComicsContent { get; init; }
-    public string MainCategory { get; init; }
+    public string? MainCategory { get; init; }
     public int? SamplePageCount { get; init; }
     public int? PrintedPageCount { get; init; }
     public int? RatingsCount { get; init; }
@@ -62,15 +64,31 @@ public class VolumeInfo
         ImageLinks imageLinks,
         Dimentions dimentions)
     {
-        Id = id;
+        DateTime dt;
+        if (DateTime.TryParseExact(publishedDate, "yyyy-mm-dd", CultureInfo.InvariantCulture, DateTimeStyles.None,
+                out dt))
+        {
+            PublishedDate = dt;
+        }
+
         Title = title;
+        if (string.IsNullOrEmpty(title))
+        {
+            Title = string.Empty;
+        }
+
         Publisher = publisher;
+        if (string.IsNullOrEmpty(publisher))
+        {
+            Publisher = string.Empty;
+        }
+
+        Id = id;
         Subtitle = subtitle;
         ComicsContent = comicsContent;
         MainCategory = mainCategory;
         SamplePageCount = samplePageCount;
         PrintedPageCount = printedPageCount;
-        PublishedDate = DateTime.Parse(publishedDate);
         PageCount = pageCount;
         PrintType = printType;
         MaturityRating = maturityRating;
@@ -90,7 +108,6 @@ public class VolumeInfo
         PanelizationSummary = panelizationSummary;
         Dimentions = dimentions;
         ComicsContent = comicsContent;
-        MainCategory = mainCategory;
         SamplePageCount = samplePageCount;
         PrintedPageCount = printedPageCount;
     }

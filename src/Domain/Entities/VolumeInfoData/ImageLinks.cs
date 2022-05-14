@@ -2,12 +2,12 @@
 
 public class ImageLinks : ValueObject
 {
-    public string ExtraLarge { get; init; }
-    public string Large { get; init; }
-    public string Medium { get; init; }
-    public string Small { get; init; }
-    public string SmallThumbnail { get; init; }
-    public string Thumbnail { get; init; }
+    public string? ExtraLarge { get; init; }
+    public string? Large { get; init; }
+    public string? Medium { get; init; }
+    public string? Small { get; init; }
+    public string? SmallThumbnail { get; init; }
+    public string? Thumbnail { get; init; }
     
     protected ImageLinks()
     {
