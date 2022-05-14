@@ -6,6 +6,7 @@ using CleanBooks.WebUI.Filters;
 using CleanBooks.WebUI.Services;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Rewrite;
 using NSwag;
 using NSwag.Generation.Processors.Security;
 
@@ -105,19 +106,24 @@ public class Startup
                 pattern: "{controller}/{action=Index}/{id?}");
             endpoints.MapRazorPages();
         });
+        
+        // Default redirection to swagger ui
+        app.UseRewriter(new RewriteOptions() 
+            // Regex for "", "/" and "" (whitespace)
+            .AddRedirect("^(|\\|\\s+)$", "/api"));
 
-        app.UseSpa(spa =>
-        {
-                // To learn more about options for serving an Angular SPA from ASP.NET Core,
-                // see https://go.microsoft.com/fwlink/?linkid=864501
-
-                spa.Options.SourcePath = "ClientApp";
-
-            if (env.IsDevelopment())
-            {
-                    //spa.UseAngularCliServer(npmScript: "start");
-                    spa.UseProxyToSpaDevelopmentServer(Configuration["SpaBaseUrl"] ?? "http://localhost:4200");
-            }
-        });
+        // app.UseSpa(spa =>
+        // {
+        //         // To learn more about options for serving an Angular SPA from ASP.NET Core,
+        //         // see https://go.microsoft.com/fwlink/?linkid=864501
+        //
+        //         spa.Options.SourcePath = "ClientApp";
+        //
+        //     if (env.IsDevelopment())
+        //     {
+        //             //spa.UseAngularCliServer(npmScript: "start");
+        //             spa.UseProxyToSpaDevelopmentServer(Configuration["SpaBaseUrl"] ?? "http://localhost:4200");
+        //     }
+        // });
     }
 }
