@@ -1,13 +1,13 @@
 ﻿namespace CleanBooks.Domain.Entities.VolumeInfoData;
 
-public class PanelizationSummary: ValueObject
+public class PanelizationSummary : ValueObject
 {
     public bool? ContainsEpubBubbles { get; init; }
     public bool? ContainsImageBubbles { get; init; }
     public string EpubBubbleVersion { get; init; }
     public string ImageBubbleVersion { get; init; }
 
-    public PanelizationSummary()
+    protected PanelizationSummary()
     {
     }
 

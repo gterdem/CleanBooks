@@ -5,7 +5,12 @@ public class ReadingModes : ValueObject
     public bool? Text { get; init; }
     public bool? Image { get; init; }
 
-    internal ReadingModes(bool? text, bool? image)
+    protected ReadingModes()
+    {
+        
+    }
+
+    public ReadingModes(bool? text, bool? image)
     {
         Text = text;
         Image = image;
