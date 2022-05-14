@@ -2,6 +2,8 @@ using CleanBooks.Infrastructure.Identity;
 using CleanBooks.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Serilog;
+using Serilog.Events;
 
 namespace CleanBooks.WebUI;
 
@@ -9,6 +11,19 @@ public class Program
 {
     public async static Task Main(string[] args)
     {
+        Log.Logger = new LoggerConfiguration()
+#if DEBUG
+            .MinimumLevel.Debug()
+#else
+                .MinimumLevel.Information()
+#endif
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+            .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+            .Enrich.FromLogContext()
+            .WriteTo.Async(c => c.File("Logs/logs.txt"))
+            .WriteTo.Async(c => c.Console())
+            .CreateLogger();
+        
         var host = CreateHostBuilder(args).Build();
 
         using (var scope = host.Services.CreateScope())
@@ -45,6 +60,9 @@ public class Program
 
     public static IHostBuilder CreateHostBuilder(string[] args) =>
         Host.CreateDefaultBuilder(args)
-            .ConfigureWebHostDefaults(webBuilder => 
-                webBuilder.UseStartup<Startup>());
+            .ConfigureWebHostDefaults(webBuilder =>
+            {
+                webBuilder.UseSerilog();
+                webBuilder.UseStartup<Startup>();
+            });
 }
