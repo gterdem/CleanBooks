@@ -1,6 +1,8 @@
 ﻿using System.Reflection;
 using CleanBooks.Application.Common.Interfaces;
 using CleanBooks.Domain.Common;
+using CleanBooks.Domain.Entities;
+using CleanBooks.Domain.Entities.VolumeInfoData;
 using CleanBooks.Infrastructure.Identity;
 using Duende.IdentityServer.EntityFramework.Options;
 using Microsoft.AspNetCore.ApiAuthorization.IdentityServer;
@@ -26,6 +28,9 @@ public class ApplicationDbContext : ApiAuthorizationDbContext<ApplicationUser>, 
         _domainEventService = domainEventService;
         _dateTime = dateTime;
     }
+    
+    public DbSet<Volume> Volumes => Set<Volume>();
+    public DbSet<VolumeInfo> VolumeInfo => Set<VolumeInfo>();
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = new CancellationToken())
     {
