@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text;
+using Ardalis.Specification.EntityFrameworkCore;
 using AutoMapper;
 using CleanBooks.Application.Common;
 using CleanBooks.Application.Common.Interfaces;
@@ -7,8 +8,10 @@ using CleanBooks.Application.Common.Mappings;
 using CleanBooks.Domain.Entities;
 using CleanBooks.Domain.Entities.VolumeInfoData;
 using CleanBooks.Domain.Enums;
+using CleanBooks.Domain.Specifications;
 using Google.Apis.Books.v1;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace CleanBooks.Application.Books.Queries.GetBooks;
@@ -19,10 +22,11 @@ public class GetBooksQuery : IRequest<VolumesDto>
     public string? VolumeId { get; set; }
     public string? LangRestrict { get; set; }
     public string? Filter { get; set; }
+    public OrderByType OrderBy { get; set; } = OrderByType.relevance;
     public int? StartIndex { get; set; } = 0;
     [Range(0, 40)] public int? MaxResults { get; set; } = 10;
 
-    public SearchQuery Query
+    protected SearchQuery Query
     {
         get
         {
@@ -46,18 +50,21 @@ public class GetBooksQuery : IRequest<VolumesDto>
             {
                 if (QValue.Contains(':'))
                 {
-                    QValue=String.Empty;
+                    QValue = String.Empty;
                 }
             }
             var termCount = _searchTerms.Count(q => q == ':');
-            
+
             if (_searchTerms.Contains("intitle:"))
             {
                 if (termCount == 1) //q=intitle:starwars
                 {
                     InTitle = _searchTerms.Split("intitle:")[1];
                 }
-                else if(termCount > 1 && QValue == string.Empty) //q=intitle:star wars+inauthor:lucas || q=star wars+intitle:star wars+inauthor:lucas
+                else if
+                    (termCount > 1 &&
+                     QValue == string
+                         .Empty) //q=intitle:star wars+inauthor:lucas || q=star wars+intitle:star wars+inauthor:lucas
                 {
                     try
                     {
@@ -67,7 +74,6 @@ public class GetBooksQuery : IRequest<VolumesDto>
                     {
                         InTitle = QueryUtil.GetStringBetweenStrings(_searchTerms, "+", "intitle:");
                     }
-                    
                 }
             }
 
@@ -77,27 +83,30 @@ public class GetBooksQuery : IRequest<VolumesDto>
                 {
                     InAuthor = _searchTerms.Split("inauthor:")[1];
                 }
-                else if(termCount > 1 && QValue == string.Empty) //q=intitle:star wars+inauthor:lucas || q=star wars+intitle:star wars+inauthor:lucas
+                else if
+                    (termCount > 1 &&
+                     QValue == string
+                         .Empty) //q=intitle:star wars+inauthor:lucas || q=star wars+intitle:star wars+inauthor:lucas
                 {
                     //TODO: needs better approach
                     try
                     {
                         InAuthor = QueryUtil.GetStringBetweenStrings(_searchTerms, "inauthor:", "+");
                     }
-                    catch (ArgumentOutOfRangeException  e)
+                    catch (ArgumentOutOfRangeException e)
                     {
-                        InAuthor = QueryUtil.GetStringBetweenStrings(_searchTerms, "+","inauthor:");
+                        InAuthor = QueryUtil.GetStringBetweenStrings(_searchTerms, "+", "inauthor:");
                     }
                 }
             }
 
             if (searchTerms.Contains("inpublisher:"))
             {
-                if (termCount == 1) 
+                if (termCount == 1)
                 {
                     InPublisher = _searchTerms.Split("inpublisher:")[1];
                 }
-                else if(termCount > 1 && QValue == string.Empty)
+                else if (termCount > 1 && QValue == string.Empty)
                 {
                     InPublisher = QueryUtil.GetStringBetweenStrings(_searchTerms, "inpublisher:", "+");
                 }
@@ -105,11 +114,11 @@ public class GetBooksQuery : IRequest<VolumesDto>
 
             if (searchTerms.Contains("subject:"))
             {
-                if (termCount == 1) 
+                if (termCount == 1)
                 {
                     Subject = _searchTerms.Split("subject:")[1];
                 }
-                else if(termCount > 1 && QValue == string.Empty)
+                else if (termCount > 1 && QValue == string.Empty)
                 {
                     Subject = QueryUtil.GetStringBetweenStrings(_searchTerms, "subject:", "+");
                 }
@@ -152,21 +161,38 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
     public async Task<VolumesDto> Handle(GetBooksQuery request, CancellationToken cancellationToken = default)
     {
         //TODO: Check db based on query request
-        var query = request.Query.GetSearchQuery();
+        var query = request.ToString();
 
-        VolumesDto volumes = await GetBooksFromGoogleServiceAsync(request, cancellationToken);
-        _logger.LogInformation("Request completed from Google BookService with query:{0} ...", request.Query.GetSearchQuery());
-        var newlyAddedBooks = await InsertToLocalDataStoreAsync(volumes, cancellationToken);
+        VolumesDto volumes = await GetBooksFromDatabaseAsync(request, cancellationToken);
 
-        var dto = new VolumesDto()
+        if (volumes == null)
         {
-            Kind = volumes.Kind, ETag = volumes.ETag, TotalItems = volumes.TotalItems //TODO: db query result
-        };
-        _logger.LogInformation("Mapping Book Entities to Book Dto list...");
-        var result = _mapper.Map<IList<BookDto>>(newlyAddedBooks);
-        dto.Books = result;
-        _logger.LogInformation("Returning Book Dto list...");
-        return dto;
+            volumes = await GetBooksFromGoogleServiceAsync(request, cancellationToken);
+            _logger.LogInformation("Request completed from Google BookService with query:{0} ...", request.ToString());
+            var newlyAddedBooks = await InsertToLocalDataStoreAsync(volumes, cancellationToken);
+            var dto = new VolumesDto()
+            {
+                Books = _mapper.Map<IList<BookDto>>(newlyAddedBooks),
+                Kind = volumes.Kind,
+                ETag = volumes.ETag,
+                TotalItems = volumes.TotalItems //TODO: db query result
+            };
+            _logger.LogInformation("Returning Book Dto list...");
+            return dto;
+        }
+
+        return volumes;
+    }
+
+    private async Task<VolumesDto> GetBooksFromDatabaseAsync(GetBooksQuery request, CancellationToken cancellationToken)
+    {
+        var result = await _dbContext.Books
+            .AsNoTracking()
+            .WithSpecification(new OrderBySpecification(request.OrderBy))
+            .WithSpecification(new BooksByPaginatedSpec(request.StartIndex.Value, request.MaxResults.Value))
+            .ProjectToListAsync<BookDto>(_mapper.ConfigurationProvider);
+
+        return new VolumesDto() {Books = result, TotalItems = (await _dbContext.Books.CountAsync(cancellationToken)), Kind = "books#volume"};
     }
 
     private async Task<List<Book>> InsertToLocalDataStoreAsync(VolumesDto volumes, CancellationToken cancellationToken)
@@ -226,9 +252,9 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
     private async Task<VolumesDto> GetBooksFromGoogleServiceAsync(GetBooksQuery request,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("Requesting volume list from Google BookService with query:{0}", request.Query.GetSearchQuery());
+        _logger.LogInformation("Requesting volume list from Google BookService with query:{0}", request.ToString());
         BooksService service = new BooksService();
-        var listRequest = service.Volumes.List(request.Query.GetSearchQuery());
+        var listRequest = service.Volumes.List(request.ToString());
         var result = await listRequest.ExecuteAsync(cancellationToken);
         return BookMapper.MapGoogleVolumesDataToVolumeDto(result);
     }

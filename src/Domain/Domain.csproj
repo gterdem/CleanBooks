@@ -9,7 +9,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Entities" />
+        <PackageReference Include="Ardalis.Specification" Version="6.0.1" />
+        <PackageReference Include="Ardalis.Specification.EntityFrameworkCore" Version="6.0.1" />
       <Folder Include="Events" />
       <Folder Include="ValueObjects" />
     </ItemGroup>

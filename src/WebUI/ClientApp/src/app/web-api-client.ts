@@ -15,7 +15,7 @@ import { HttpClient, HttpHeaders, HttpResponse, HttpResponseBase } from '@angula
 export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL');
 
 export interface IBooksClient {
-    get(q: string | undefined, volumeId: string | null | undefined, langRestrict: string | null | undefined, filter: string | null | undefined, startIndex: number | null | undefined, maxResults: number | null | undefined): Observable<VolumesDto>;
+    get(q: string | undefined, volumeId: string | null | undefined, langRestrict: string | null | undefined, filter: string | null | undefined, orderBy: OrderByType | undefined, startIndex: number | null | undefined, maxResults: number | null | undefined): Observable<VolumesDto>;
 }
 
 @Injectable({
@@ -31,7 +31,7 @@ export class BooksClient implements IBooksClient {
         this.baseUrl = baseUrl !== undefined && baseUrl !== null ? baseUrl : "";
     }
 
-    get(q: string | undefined, volumeId: string | null | undefined, langRestrict: string | null | undefined, filter: string | null | undefined, startIndex: number | null | undefined, maxResults: number | null | undefined): Observable<VolumesDto> {
+    get(q: string | undefined, volumeId: string | null | undefined, langRestrict: string | null | undefined, filter: string | null | undefined, orderBy: OrderByType | undefined, startIndex: number | null | undefined, maxResults: number | null | undefined): Observable<VolumesDto> {
         let url_ = this.baseUrl + "/api/Books?";
         if (q === null)
             throw new Error("The parameter 'q' cannot be null.");
@@ -43,6 +43,10 @@ export class BooksClient implements IBooksClient {
             url_ += "LangRestrict=" + encodeURIComponent("" + langRestrict) + "&";
         if (filter !== undefined && filter !== null)
             url_ += "Filter=" + encodeURIComponent("" + filter) + "&";
+        if (orderBy === null)
+            throw new Error("The parameter 'orderBy' cannot be null.");
+        else if (orderBy !== undefined)
+            url_ += "OrderBy=" + encodeURIComponent("" + orderBy) + "&";
         if (startIndex !== undefined && startIndex !== null)
             url_ += "StartIndex=" + encodeURIComponent("" + startIndex) + "&";
         if (maxResults !== undefined && maxResults !== null)
@@ -407,12 +411,12 @@ export interface IValueObject {
 }
 
 export class ImageLinks extends ValueObject implements IImageLinks {
-    extraLarge?: string;
-    large?: string;
-    medium?: string;
-    small?: string;
-    smallThumbnail?: string;
-    thumbnail?: string;
+    extraLarge?: string | undefined;
+    large?: string | undefined;
+    medium?: string | undefined;
+    small?: string | undefined;
+    smallThumbnail?: string | undefined;
+    thumbnail?: string | undefined;
 
     constructor(data?: IImageLinks) {
         super(data);
@@ -451,12 +455,12 @@ export class ImageLinks extends ValueObject implements IImageLinks {
 }
 
 export interface IImageLinks extends IValueObject {
-    extraLarge?: string;
-    large?: string;
-    medium?: string;
-    small?: string;
-    smallThumbnail?: string;
-    thumbnail?: string;
+    extraLarge?: string | undefined;
+    large?: string | undefined;
+    medium?: string | undefined;
+    small?: string | undefined;
+    smallThumbnail?: string | undefined;
+    thumbnail?: string | undefined;
 }
 
 export class ReadingModes extends ValueObject implements IReadingModes {
@@ -499,8 +503,8 @@ export interface IReadingModes extends IValueObject {
 export class PanelizationSummary extends ValueObject implements IPanelizationSummary {
     containsEpubBubbles?: boolean | undefined;
     containsImageBubbles?: boolean | undefined;
-    epubBubbleVersion?: string;
-    imageBubbleVersion?: string;
+    epubBubbleVersion?: string | undefined;
+    imageBubbleVersion?: string | undefined;
 
     constructor(data?: IPanelizationSummary) {
         super(data);
@@ -537,14 +541,14 @@ export class PanelizationSummary extends ValueObject implements IPanelizationSum
 export interface IPanelizationSummary extends IValueObject {
     containsEpubBubbles?: boolean | undefined;
     containsImageBubbles?: boolean | undefined;
-    epubBubbleVersion?: string;
-    imageBubbleVersion?: string;
+    epubBubbleVersion?: string | undefined;
+    imageBubbleVersion?: string | undefined;
 }
 
 export class Dimentions extends ValueObject implements IDimentions {
-    height?: string;
-    thickness?: string;
-    width?: string;
+    height?: string | undefined;
+    thickness?: string | undefined;
+    width?: string | undefined;
 
     constructor(data?: IDimentions) {
         super(data);
@@ -577,9 +581,9 @@ export class Dimentions extends ValueObject implements IDimentions {
 }
 
 export interface IDimentions extends IValueObject {
-    height?: string;
-    thickness?: string;
-    width?: string;
+    height?: string | undefined;
+    thickness?: string | undefined;
+    width?: string | undefined;
 }
 
 export class IndustryIdentifierDto implements IIndustryIdentifierDto {
@@ -628,6 +632,11 @@ export interface IIndustryIdentifierDto {
     volumeInfoId?: string;
     type?: string;
     identifier?: string;
+}
+
+export enum OrderByType {
+    Relevance = 0,
+    Newest = 1,
 }
 
 export class SwaggerException extends Error {
