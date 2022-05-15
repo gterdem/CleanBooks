@@ -10,7 +10,6 @@ using CleanBooks.Domain.Entities.VolumeInfoData;
 using CleanBooks.Domain.Enums;
 using CleanBooks.Domain.Specifications;
 using Google.Apis.Books.v1;
-using Google.Apis.Books.v1.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -278,7 +277,6 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
         List<Book> bookEntityList = new List<Book>();
         foreach (BookDto bookDto in nonExistingBooks)
         {
-            _logger.LogInformation("============ BOOK ID:{0}", bookDto.GApiVolumeId);
             bookEntityList.Add(CreateNewBookFromBookDto(bookDto));
         }
 
@@ -306,7 +304,7 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
         int pageCount = vinfo.PageCount ?? 0;
         bool allowAnonLogging = vinfo.AllowAnonLogging ?? false;
         Enum.TryParse(vinfo.PrintType, out printType);
-        
+
         // Nullable
         if (vinfo.Categories == null)
         {
@@ -349,6 +347,7 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
         BooksService service = new BooksService();
         var listRequest = service.Volumes.List(request.ToString());
         var result = await listRequest.ExecuteAsync(cancellationToken);
+
         return BookMapper.MapGoogleVolumesDataToVolumeDto(result);
     }
 }
