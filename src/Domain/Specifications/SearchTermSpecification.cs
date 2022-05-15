@@ -8,7 +8,7 @@ public class SearchTermSpecification : Specification<Book>
     public SearchTermSpecification(string queryTerm, string inTitle, string inAuthor, string inPublisher, string subject)
     {
         var query = Query
-            .Where(q => q.VolumeInfo.Title.Contains(queryTerm) || q.VolumeInfo.Subtitle.Contains(queryTerm));
+            .Where(q => q.VolumeInfo.Title.Contains(queryTerm) || q.VolumeInfo.Subtitle.Contains(queryTerm) || q.VolumeInfo.Description.Contains(queryTerm));
         
         if (!string.IsNullOrEmpty(inTitle))
         {

@@ -147,6 +147,20 @@ public class GetBooksQuery : IRequest<VolumesDto>
         {
             builder.Append($"&volumeId={VolumeId}");
         }
+        if (MaxResults != 10)
+        {
+            builder.Append($"&maxResults={MaxResults}");
+        }
+
+        if (StartIndex != 0)
+        {
+            builder.Append($"&startIndex={StartIndex}");
+        }
+
+        if (OrderBy != OrderByType.relevance)
+        {
+            builder.Append($"&orderBy=newest");
+        }
 
         //TODO: Filter, LangRestrict
         return builder.ToString();
@@ -171,7 +185,7 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
 
     public async Task<VolumesDto> Handle(GetBooksQuery request, CancellationToken cancellationToken = default)
     {
-        var cacheKey = request.GetQueryTerms().GetSearchQuery();
+        var cacheKey = request.ToString();
         
         if (_cache.TryGetValue(cacheKey, out VolumesDto volumes))
         {
@@ -182,10 +196,15 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
             volumes = await GetAndCacheDataAsync(cacheKey, request, cancellationToken);
         }
 
+        // TODO: For better datastore building, check if book count is equal to request.maxResults. Request again and add the missing ones 
         if (volumes == null || volumes.Books.Count == 0)
         {
             volumes = await GetBooksFromGoogleServiceAsync(request, cancellationToken);
             _logger.LogInformation("Request completed from Google BookService with query:{0} ...", request.ToString());
+            if (volumes == null || volumes.Books.Count == 0)
+            {
+                _logger.LogWarning("Google API didn't return any books!");
+            }
             var newlyAddedBooks = await InsertToLocalDataStoreAsync(volumes, cancellationToken);
             var dto = new VolumesDto()
             {
@@ -204,7 +223,7 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
     private async Task<VolumesDto> GetAndCacheDataAsync(string cacheKey, GetBooksQuery request,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Data couldn't be found in cache with key{0}", cacheKey);
+        _logger.LogInformation("Data couldn't be found in cache with key: {0}", cacheKey);
         var result = await GetBooksFromDatabaseAsync(request, cancellationToken);
 
         var cacheEntryOptions = new MemoryCacheEntryOptions();
@@ -243,11 +262,16 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
 
     private async Task<List<Book>> InsertToLocalDataStoreAsync(VolumesDto volumes, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Inserting {0} books to local datastore...", volumes.Books.Count);
-        //TODO: Check if the book exist - do it performant
+        var volumeIdList = volumes.Books.Select(q => q.GApiVolumeId).ToList();
 
+        var containingIds = _dbContext.Books.Where(q => volumeIdList.Contains(q.GApiVolumeId))
+            .Select(t=>t.GApiVolumeId)
+            .ToList();
+        var nonExistingBooks = volumes.Books.Where(t => !containingIds.Contains(t.GApiVolumeId)).ToList();
+        
+        _logger.LogInformation("Inserting {0} books to local datastore...", nonExistingBooks.Count);
         List<Book> bookEntityList = new List<Book>();
-        foreach (BookDto bookDto in volumes.Books)
+        foreach (BookDto bookDto in nonExistingBooks)
         {
             bookEntityList.Add(CreateNewBookFromBookDto(bookDto));
         }
@@ -306,7 +330,7 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
     {
         _logger.LogInformation("Requesting volume list from Google BookService with query:{0}", request.ToString());
         BooksService service = new BooksService();
-        var listRequest = service.Volumes.List(request.ToString());
+        var listRequest = service.Volumes.List(q);
         var result = await listRequest.ExecuteAsync(cancellationToken);
         return BookMapper.MapGoogleVolumesDataToVolumeDto(result);
     }
