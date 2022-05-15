@@ -7,25 +7,25 @@ public class SearchTermSpecification : Specification<Book>
 {
     public SearchTermSpecification(string queryTerm, string inTitle, string inAuthor, string inPublisher, string subject)
     {
-        var query = Query.Include(q => q.VolumeInfo)
-            .Where(q => q.VolumeInfo.Title.Contains(inTitle) || q.VolumeInfo.Subtitle.Contains(inTitle));
+        var query = Query
+            .Where(q => q.VolumeInfo.Title.Contains(queryTerm) || q.VolumeInfo.Subtitle.Contains(queryTerm));
         
-        if (string.IsNullOrEmpty(inTitle))
+        if (!string.IsNullOrEmpty(inTitle))
         {
             query = query.Where(q => q.VolumeInfo.Title.Contains(inTitle));
         }
 
-        if (string.IsNullOrEmpty(inAuthor))
+        if (!string.IsNullOrEmpty(inAuthor))
         {
             query = query.Where(q => q.VolumeInfo.Authors.Contains(inAuthor));
         }
 
-        if (string.IsNullOrEmpty(inPublisher))
+        if (!string.IsNullOrEmpty(inPublisher))
         {
             query = query.Where(q => q.VolumeInfo.Publisher.Contains(inPublisher));
         }
 
-        if (string.IsNullOrEmpty(subject))
+        if (!string.IsNullOrEmpty(subject))
         {
             query = query.Where(q => q.VolumeInfo.Categories.Contains(subject));
         }

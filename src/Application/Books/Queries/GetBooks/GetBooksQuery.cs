@@ -12,7 +12,9 @@ using CleanBooks.Domain.Specifications;
 using Google.Apis.Books.v1;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Primitives;
 
 namespace CleanBooks.Application.Books.Queries.GetBooks;
 
@@ -31,14 +33,6 @@ public class GetBooksQuery : IRequest<VolumesDto>
         return new SearchQuery(Q);
     }
 
-    // protected SearchQuery Query
-    // {
-    //     get
-    //     {
-    //         return new SearchQuery(Q);
-    //     }
-    // }
-
     public class SearchQuery
     {
         private readonly string _searchTerms;
@@ -51,14 +45,22 @@ public class GetBooksQuery : IRequest<VolumesDto>
         public SearchQuery(string searchTerms)
         {
             _searchTerms = searchTerms;
-            QValue = QueryUtil.GetStringBetweenCharacters(_searchTerms, '=', '+');
+            var termCount = _searchTerms.Count(q => q == ':');
+
+            if (termCount == 0)
             {
-                if (QValue.Contains(':'))
+                QValue = searchTerms;
+            }
+            else
+            {
+                QValue = QueryUtil.GetStringBetweenCharacters(_searchTerms, '=', '+');
                 {
-                    QValue = String.Empty;
+                    if (QValue.Contains(':'))
+                    {
+                        QValue = String.Empty;
+                    }
                 }
             }
-            var termCount = _searchTerms.Count(q => q == ':');
 
             if (_searchTerms.Contains("intitle:"))
             {
@@ -156,20 +158,31 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
     private readonly ILogger<GetBooksQueryHandler> _logger;
     private readonly IApplicationDbContext _dbContext;
     private readonly IMapper _mapper;
+    private readonly IMemoryCache _cache;
 
-    public GetBooksQueryHandler(ILogger<GetBooksQueryHandler> logger, IApplicationDbContext dbContext, IMapper mapper)
+    public GetBooksQueryHandler(ILogger<GetBooksQueryHandler> logger, IApplicationDbContext dbContext, IMapper mapper,
+        IMemoryCache cache)
     {
         _logger = logger;
         _dbContext = dbContext;
         _mapper = mapper;
+        _cache = cache;
     }
 
     public async Task<VolumesDto> Handle(GetBooksQuery request, CancellationToken cancellationToken = default)
     {
-        //TODO: Add caching
-        VolumesDto volumes = await GetBooksFromDatabaseAsync(request, cancellationToken);
+        var cacheKey = request.GetQueryTerms().GetSearchQuery();
+        
+        if (_cache.TryGetValue(cacheKey, out VolumesDto volumes))
+        {
+            _logger.LogInformation("Data is retrieved from the cache with key {0}", cacheKey);
+        }
+        else
+        {
+            volumes = await GetAndCacheDataAsync(cacheKey, request, cancellationToken);
+        }
 
-        if (!volumes.Books.Any())
+        if (volumes == null || volumes.Books.Count == 0)
         {
             volumes = await GetBooksFromGoogleServiceAsync(request, cancellationToken);
             _logger.LogInformation("Request completed from Google BookService with query:{0} ...", request.ToString());
@@ -186,6 +199,24 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
         }
 
         return volumes;
+    }
+
+    private async Task<VolumesDto> GetAndCacheDataAsync(string cacheKey, GetBooksQuery request,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Data couldn't be found in cache with key{0}", cacheKey);
+        var result = await GetBooksFromDatabaseAsync(request, cancellationToken);
+
+        var cacheEntryOptions = new MemoryCacheEntryOptions();
+        cacheEntryOptions.SlidingExpiration = TimeSpan.FromSeconds(10);
+        cacheEntryOptions.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30);
+        var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        cacheEntryOptions.AddExpirationToken(new CancellationChangeToken(cancellationTokenSource.Token));
+
+        _cache.Set(cacheKey, result, cacheEntryOptions);
+        _logger.LogInformation("New Cache has been created with key{0} for absolute:{1} seconds", cacheKey, 30);
+
+        return result;
     }
 
     private async Task<VolumesDto> GetBooksFromDatabaseAsync(GetBooksQuery request, CancellationToken cancellationToken)
@@ -264,8 +295,9 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
         );
         foreach (var ii in vinfo.IndustryIdentifiers)
         {
-            newVolume.AddIndustryIdentifier(ii.Type,ii.Identifier);
+            newVolume.AddIndustryIdentifier(ii.Type, ii.Identifier);
         }
+
         return newVolume;
     }
 
