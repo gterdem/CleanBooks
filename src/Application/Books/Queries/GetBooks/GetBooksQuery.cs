@@ -10,6 +10,7 @@ using CleanBooks.Domain.Entities.VolumeInfoData;
 using CleanBooks.Domain.Enums;
 using CleanBooks.Domain.Specifications;
 using Google.Apis.Books.v1;
+using Google.Apis.Books.v1.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -147,6 +148,7 @@ public class GetBooksQuery : IRequest<VolumesDto>
         {
             builder.Append($"&volumeId={VolumeId}");
         }
+
         if (MaxResults != 10)
         {
             builder.Append($"&maxResults={MaxResults}");
@@ -186,7 +188,7 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
     public async Task<VolumesDto> Handle(GetBooksQuery request, CancellationToken cancellationToken = default)
     {
         var cacheKey = request.ToString();
-        
+
         if (_cache.TryGetValue(cacheKey, out VolumesDto volumes))
         {
             _logger.LogInformation("Data is retrieved from the cache with key {0}", cacheKey);
@@ -203,8 +205,11 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
             _logger.LogInformation("Request completed from Google BookService with query:{0} ...", request.ToString());
             if (volumes == null || volumes.Books.Count == 0)
             {
-                _logger.LogWarning("Google API didn't return any books!");
+                //TODO: Better resiliency. Polly maybe
+                _logger.LogError("Google API didn't return any books!");
+                throw new ApplicationException("Google API didn't return any books! Try again later!");
             }
+
             var newlyAddedBooks = await InsertToLocalDataStoreAsync(volumes, cancellationToken);
             var dto = new VolumesDto()
             {
@@ -265,14 +270,15 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
         var volumeIdList = volumes.Books.Select(q => q.GApiVolumeId).ToList();
 
         var containingIds = _dbContext.Books.Where(q => volumeIdList.Contains(q.GApiVolumeId))
-            .Select(t=>t.GApiVolumeId)
+            .Select(t => t.GApiVolumeId)
             .ToList();
         var nonExistingBooks = volumes.Books.Where(t => !containingIds.Contains(t.GApiVolumeId)).ToList();
-        
+
         _logger.LogInformation("Inserting {0} books to local datastore...", nonExistingBooks.Count);
         List<Book> bookEntityList = new List<Book>();
         foreach (BookDto bookDto in nonExistingBooks)
         {
+            _logger.LogInformation("============ BOOK ID:{0}", bookDto.GApiVolumeId);
             bookEntityList.Add(CreateNewBookFromBookDto(bookDto));
         }
 
@@ -300,6 +306,17 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
         int pageCount = vinfo.PageCount ?? 0;
         bool allowAnonLogging = vinfo.AllowAnonLogging ?? false;
         Enum.TryParse(vinfo.PrintType, out printType);
+        
+        // Nullable
+        if (vinfo.Categories == null)
+        {
+            vinfo.Categories = new List<string>();
+        }
+
+        if (vinfo.Authors == null)
+        {
+            vinfo.Authors = new List<string>();
+        }
 
         var newVolume = new VolumeInfo(id: Guid.NewGuid(),
             title: vinfo.Title, subtitle: vinfo.Subtitle, publisher: vinfo.Publisher,
@@ -330,7 +347,7 @@ public class GetBooksQueryHandler : IRequestHandler<GetBooksQuery, VolumesDto>
     {
         _logger.LogInformation("Requesting volume list from Google BookService with query:{0}", request.ToString());
         BooksService service = new BooksService();
-        var listRequest = service.Volumes.List(q);
+        var listRequest = service.Volumes.List(request.ToString());
         var result = await listRequest.ExecuteAsync(cancellationToken);
         return BookMapper.MapGoogleVolumesDataToVolumeDto(result);
     }
